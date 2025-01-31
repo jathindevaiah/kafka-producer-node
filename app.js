@@ -1,19 +1,38 @@
-// Import the http module
-const http = require('http');
+import { Kafka } from 'kafkajs';
+import dotenv from 'dotenv';
 
-// Define the hostname and port
-const hostname = '127.0.0.1';
-const port = 3000;
+dotenv.config();
 
-// Create the server
-const server = http.createServer((req, res) => {
-  // Set the response header
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/plain');
-  res.end('Hello, World!\n');
+// Set up Kafka configuration
+const kafka = new Kafka({
+  clientId: process.env.KAFKA_CLIENT_ID, // Replace with your app name
+  brokers: [process.env.KAFKA_BROKER], // Replace with your Confluent Cloud broker(s)
+  ssl: true,
+  sasl: {
+    mechanism: 'plain',
+    username: process.env.KAFKA_API_KEY, // Replace with your API key
+    password: process.env.KAFKA_API_SECRET, // Replace with your API secret
+  },
 });
 
-// Make the server listen on the specified port and hostname
-server.listen(port, hostname, () => {
-  console.log(`Server running at http://${hostname}:${port}/`);
-});
+// Create producer
+const producer = kafka.producer();
+
+const run = async () => {
+  await producer.connect();
+
+  try {
+    // Send a message to a Kafka topic
+    await producer.send({
+      topic: 'test-topic', // Replace with your topic name
+      messages: [{ value: 'Hello Kafka from Node.js!' }],
+    });
+    console.log('Message sent successfully');
+  } catch (error) {
+    console.error('Error producing message:', error);
+  } finally {
+    await producer.disconnect();
+  }
+};
+
+run().catch(console.error);
